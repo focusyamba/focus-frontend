@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>RunTrack</title>
+
+<!-- Telegram's own SDK for Mini Apps — gives us initData, theme colors, etc. -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<!-- Leaflet — a free, open-source map library -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<style>
+  :root {
+    --ink: #16261f;         /* dark green-black — main text */
+    --paper: #f4f2ec;       /* warm off-white background */
+    --trail: #3c6e47;       /* deep trail-green — primary actions */
+    --trail-dark: #2a4f33;
+    --spark: #e2572b;       /* burnt orange — stop / alert accent */
+    --line: #d9d5c8;        /* soft divider lines */
+    --muted: #6b7268;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow: hidden;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* ---------- Top bar ---------- */
+  #topbar {
+    padding: 14px 18px 10px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+    z-index: 10;
+  }
+
+  #topbar .wordmark {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  #topbar .wordmark span { color: var(--trail); }
+
+  #topbar .username {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ---------- Map ---------- */
+  #map {
+    flex: 1;
+    min-height: 0;
+    background: #e7e4d8;
+  }
+
+  /* ---------- Bottom stats sheet ---------- */
+  #sheet {
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+    padding: 18px 20px calc(18px + env(safe-area-inset-bottom));
+    z-index: 10;
+  }
+
+  #stats {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr 1fr;
+    gap: 4px;
+    margin-bottom: 18px;
+  }
+
+  .stat .value {
+    font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat:first-child .value { font-size: 34px; color: var(--trail-dark); }
+
+  .stat .label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  #actionRow { display: flex; gap: 10px; }
+
+  button {
+    flex: 1;
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.08s ease, opacity 0.15s ease;
+  }
+
+  button:active { transform: scale(0.97); }
+
+  #startBtn {
+    background: var(--trail);
+    color: #fff;
+  }
+
+  #stopBtn {
+    background: var(--spark);
+    color: #fff;
+    display: none;
+  }
+
+  #status {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+    min-height: 16px;
+  }
+
+  .running #stats .stat:first-child .value { color: var(--spark); }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="topbar">
+    <div class="wordmark">Run<span>Track</span></div>
+    <div class="username" id="username">—</div>
+  </div>
+
+  <div id="map"></div>
+
+  <div id="sheet">
+    <div id="stats">
+      <div class="stat">
+        <div class="value" id="statTime">00:00</div>
+        <div class="label">время</div>
+      </div>
+      <div class="stat">
+        <div class="value" id="statDistance">0.00</div>
+        <div class="label">км</div>
+      </div>
+      <div class="stat">
+        <div class="value" id="statPace">—:—</div>
+        <div class="label">темп /км</div>
+      </div>
+    </div>
+
+    <div id="actionRow">
+      <button id="startBtn">Начать пробежку</button>
+      <button id="stopBtn">Завершить</button>
+    </div>
+
+    <div id="status"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
