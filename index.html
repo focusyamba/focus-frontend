@@ -91,7 +91,51 @@
 
   #trackScreen { position: relative; }
 
-  /* ---------- Track screen: map ---------- */
+  /* ---------- Stats panel (top, like Adidas) ---------- */
+  #statsPanel {
+    flex-shrink: 0;
+    padding: 8px 20px 18px;
+    text-align: center;
+    border-bottom: 1px solid var(--line);
+  }
+
+  #mainTimer {
+    font-size: 56px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #mainTimerLabel {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  #miniStatsRow {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 18px;
+  }
+
+  .mini-stat .value {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mini-stat .label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  .running #mainTimer { color: var(--violet-bright); }
+
+  /* ---------- Map (middle) ---------- */
   #map {
     flex: 1;
     min-height: 0;
@@ -126,37 +170,12 @@
 
   #locatingMsg.hidden { display: none; }
 
-  #sheet {
+  /* ---------- Bottom action bar ---------- */
+  #bottomBar {
     background: var(--surface);
     border-top: 1px solid var(--line);
-    padding: 18px 20px calc(16px + env(safe-area-inset-bottom));
+    padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
     flex-shrink: 0;
-  }
-
-  #stats {
-    display: none;
-    grid-template-columns: 1.3fr 1fr 1fr;
-    gap: 4px;
-    margin-bottom: 16px;
-  }
-
-  .running #stats { display: grid; }
-
-  .stat .value {
-    font-size: 32px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1.05;
-    font-variant-numeric: tabular-nums;
-    color: var(--ink);
-  }
-
-  .stat:first-child .value { font-size: 36px; }
-
-  .stat .label {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 4px;
   }
 
   #actionRow {
@@ -168,7 +187,7 @@
     flex: 1;
     border: none;
     border-radius: 16px;
-    padding: 15px;
+    padding: 18px;
     font-size: 16px;
     font-weight: 700;
     font-family: inherit;
@@ -211,8 +230,6 @@
     margin-top: 10px;
     min-height: 16px;
   }
-
-  .running .stat:first-child .value { color: var(--violet-bright); }
 
   /* ---------- Countdown overlay ---------- */
   #countdownOverlay {
@@ -459,6 +476,20 @@
 
   <main>
     <section id="trackScreen" class="screen active">
+      <div id="statsPanel">
+        <div id="mainTimer">00:00</div>
+        <div id="mainTimerLabel" data-i18n="statTimeLabel">time</div>
+        <div id="miniStatsRow">
+          <div class="mini-stat">
+            <div class="value" id="statDistance">0.00</div>
+            <div class="label" data-i18n="statDistanceLabel">km</div>
+          </div>
+          <div class="mini-stat">
+            <div class="value" id="statPace">—:—</div>
+            <div class="label" data-i18n="statPaceLabel">pace /km</div>
+          </div>
+        </div>
+      </div>
       <div id="map"></div>
       <div id="mapTint"></div>
       <div id="locatingMsg" data-i18n="locatingMsg">Locating you…</div>
@@ -470,23 +501,12 @@
           <button id="cancelCountdownBtn" data-i18n="cancelBtn">Cancel</button>
         </div>
       </div>
-      <div id="sheet">
-        <div id="stats">
-          <div class="stat">
-            <div class="value" id="statTime">00:00</div>
-            <div class="label" data-i18n="statTimeLabel">time</div>
-          </div>
-          <div class="stat">
-            <div class="value" id="statDistance">0.00</div>
-            <div class="label" data-i18n="statDistanceLabel">km</div>
-          </div>
-          <div class="stat">
-            <div class="value" id="statPace">—:—</div>
-            <div class="label" data-i18n="statPaceLabel">pace /km</div>
-          </div>
-        </div>
+      <div id="bottomBar">
         <div id="actionRow">
-          <button id="startBtn" data-i18n="startBtn">Start run</button>
+          <button id="startBtn">
+            <span data-i18n="startBtn">Start run</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
           <button id="pauseBtn">
             <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
             <span id="pauseBtnText" data-i18n="pauseBtn">Pause</span>
@@ -549,6 +569,6 @@
   </nav>
 </div>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

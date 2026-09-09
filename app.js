@@ -297,7 +297,7 @@ const els = {
   pauseBtnText: document.getElementById('pauseBtnText'),
   pauseIcon: document.getElementById('pauseIcon'),
   stopBtn: document.getElementById('stopBtn'),
-  time: document.getElementById('statTime'),
+  time: document.getElementById('mainTimer'),
   distance: document.getElementById('statDistance'),
   pace: document.getElementById('statPace'),
   status: document.getElementById('status'),
@@ -651,40 +651,52 @@ function initHistoryMaps(runs) {
   destroyHistoryMaps();
 
   runs.forEach((run) => {
-    const track = parseTrack(run.gps_track);
-    if (track.length < 2) return;
+    try {
+      const track = parseTrack(run.gps_track);
+      const validPoints = track.filter(
+        (p) => Number.isFinite(p.lat) && Number.isFinite(p.lon)
+      );
+      if (validPoints.length < 2) return;
 
-    const containerId = `runMap-${run.id}`;
-    const container = document.getElementById(containerId);
-    if (!container) return;
+      const containerId = `runMap-${run.id}`;
+      const container = document.getElementById(containerId);
+      if (!container) return;
 
-    const miniMap = L.map(containerId, {
-      zoomControl: false,
-      dragging: false,
-      touchZoom: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      boxZoom: false,
-      keyboard: false,
-      tap: false,
-      attributionControl: false,
-    });
+      const miniMap = L.map(containerId, {
+        zoomControl: false,
+        dragging: false,
+        touchZoom: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        tap: false,
+        attributionControl: false,
+      });
 
-    const miniTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-    }).addTo(miniMap);
+      const miniTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(miniMap);
 
-    if (currentTheme !== 'light') {
-      miniTile.getContainer().style.filter =
-        'invert(94%) hue-rotate(210deg) brightness(0.9) contrast(0.85) saturate(0.45)';
+      if (currentTheme !== 'light') {
+        miniTile.getContainer().style.filter =
+          'invert(94%) hue-rotate(210deg) brightness(0.9) contrast(0.85) saturate(0.45)';
+      }
+
+      const latlngs = validPoints.map((p) => [p.lat, p.lon]);
+      const line = L.polyline(latlngs, { color: '#9b81ff', weight: 4, opacity: 0.95 }).addTo(miniMap);
+
+      const bounds = line.getBounds();
+      if (bounds.isValid()) {
+        miniMap.fitBounds(bounds, { padding: [16, 16] });
+      } else {
+        miniMap.setView(latlngs[0], 15);
+      }
+
+      historyMapInstances.push(miniMap);
+    } catch (err) {
+      console.error('Failed to render mini-map for run', run.id, err);
     }
-
-    const latlngs = track.map((p) => [p.lat, p.lon]);
-    const line = L.polyline(latlngs, { color: '#9b81ff', weight: 4, opacity: 0.95 }).addTo(miniMap);
-
-    miniMap.fitBounds(line.getBounds(), { padding: [16, 16] });
-
-    historyMapInstances.push(miniMap);
   });
 }
 
