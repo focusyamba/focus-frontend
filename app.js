@@ -9,7 +9,7 @@ const TRANSLATIONS = {
   en: {
     navTrack: 'Tracker', navHistory: 'History', navSettings: 'Settings',
     statTimeLabel: 'time', statDistanceLabel: 'km', statPaceLabel: 'pace /km',
-    countdownLabel: 'Get ready', cancelBtn: 'Cancel',
+    countdownLabel: 'Get ready', cancelBtn: 'Cancel', skipBtn: 'Start now',
     startBtn: 'Start run', pauseBtn: 'Pause', resumeBtn: 'Resume', stopBtn: 'Finish',
     totalRunsLabel: 'runs', totalDistanceLabel: 'km total',
     languageLabel: 'Language', themeLabel: 'Theme', themeDark: 'Dark', themeLight: 'Light',
@@ -34,7 +34,7 @@ const TRANSLATIONS = {
   ru: {
     navTrack: 'Трекер', navHistory: 'История', navSettings: 'Настройки',
     statTimeLabel: 'время', statDistanceLabel: 'км', statPaceLabel: 'темп /км',
-    countdownLabel: 'Приготовьтесь', cancelBtn: 'Отмена',
+    countdownLabel: 'Приготовьтесь', cancelBtn: 'Отмена', skipBtn: 'Начать сейчас',
     startBtn: 'Начать пробежку', pauseBtn: 'Пауза', resumeBtn: 'Продолжить', stopBtn: 'Завершить',
     totalRunsLabel: 'пробежек', totalDistanceLabel: 'км всего',
     languageLabel: 'Язык', themeLabel: 'Тема', themeDark: 'Тёмная', themeLight: 'Светлая',
@@ -59,7 +59,7 @@ const TRANSLATIONS = {
   uk: {
     navTrack: 'Трекер', navHistory: 'Історія', navSettings: 'Налаштування',
     statTimeLabel: 'час', statDistanceLabel: 'км', statPaceLabel: 'темп /км',
-    countdownLabel: 'Приготуйтесь', cancelBtn: 'Скасувати',
+    countdownLabel: 'Приготуйтесь', cancelBtn: 'Скасувати', skipBtn: 'Почати зараз',
     startBtn: 'Почати пробіжку', pauseBtn: 'Пауза', resumeBtn: 'Продовжити', stopBtn: 'Завершити',
     totalRunsLabel: 'пробіжок', totalDistanceLabel: 'км всього',
     languageLabel: 'Мова', themeLabel: 'Тема', themeDark: 'Темна', themeLight: 'Світла',
@@ -281,6 +281,7 @@ const els = {
   countdownOverlay: document.getElementById('countdownOverlay'),
   countdownNumber: document.getElementById('countdownNumber'),
   cancelCountdownBtn: document.getElementById('cancelCountdownBtn'),
+  skipCountdownBtn: document.getElementById('skipCountdownBtn'),
 };
 
 els.startBtn.addEventListener('click', () => {
@@ -314,6 +315,12 @@ els.cancelCountdownBtn.addEventListener('click', () => {
   clearInterval(countdownInterval);
   els.countdownOverlay.classList.remove('active');
   appState = 'idle';
+});
+
+els.skipCountdownBtn.addEventListener('click', () => {
+  clearInterval(countdownInterval);
+  els.countdownOverlay.classList.remove('active');
+  beginRun();
 });
 
 function beginRun() {

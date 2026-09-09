@@ -234,6 +234,24 @@
     margin-bottom: 20px;
   }
 
+  #countdownActions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  #skipCountdownBtn {
+    background: var(--violet);
+    border: none;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 12px 24px;
+    border-radius: 14px;
+    cursor: pointer;
+  }
+
   #cancelCountdownBtn {
     background: var(--surface-2);
     border: 1px solid var(--line);
@@ -241,7 +259,7 @@
     font-family: inherit;
     font-size: 14px;
     font-weight: 600;
-    padding: 12px 28px;
+    padding: 12px 24px;
     border-radius: 14px;
     cursor: pointer;
   }
@@ -396,7 +414,10 @@
       <div id="countdownOverlay">
         <div id="countdownNumber">15</div>
         <div id="countdownLabel" data-i18n="countdownLabel">Get ready</div>
-        <button id="cancelCountdownBtn" data-i18n="cancelBtn">Cancel</button>
+        <div id="countdownActions">
+          <button id="skipCountdownBtn" data-i18n="skipBtn">Start now</button>
+          <button id="cancelCountdownBtn" data-i18n="cancelBtn">Cancel</button>
+        </div>
       </div>
       <div id="sheet">
         <div id="stats">
@@ -471,6 +492,6 @@
   </nav>
 </div>
 
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
