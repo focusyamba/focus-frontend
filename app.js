@@ -47,13 +47,71 @@ navBtns.forEach((btn) => {
 // ---------------------------------------------------------------------
 const map = L.map('map', { zoomControl: false }).setView([55.751244, 37.618423], 15);
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OpenStreetMap &copy; CARTO',
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors',
   maxZoom: 19,
+  className: 'dark-tiles',
 }).addTo(map);
 
 let routeLine = L.polyline([], { color: '#9b81ff', weight: 5, opacity: 0.9 }).addTo(map);
 let userMarker = null;
+
+// ---------------------------------------------------------------------
+// 3b. Ask for GPS location immediately, before any run is started,
+// so the map centers on the person and shows where they are right away.
+// ---------------------------------------------------------------------
+let hasCenteredOnUser = false;
+
+function showLiveLocationMarker(lat, lon) {
+  if (!userMarker) {
+    userMarker = L.circleMarker([lat, lon], {
+      radius: 7,
+      color: '#9b81ff',
+      fillColor: '#9b81ff',
+      fillOpacity: 1,
+      weight: 2,
+    }).addTo(map);
+  } else {
+    userMarker.setLatLng([lat, lon]);
+  }
+
+  if (!hasCenteredOnUser) {
+    map.setView([lat, lon], 16);
+    hasCenteredOnUser = true;
+  }
+}
+
+function requestInitialLocation() {
+  if (!navigator.geolocation) {
+    setStatus('Геолокация не поддерживается этим устройством');
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      showLiveLocationMarker(position.coords.latitude, position.coords.longitude);
+    },
+    (err) => {
+      console.error(err);
+      setStatus('Разрешите доступ к геолокации, чтобы видеть себя на карте');
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+
+  // Keep the marker updated with a lightweight watch even while idle,
+  // so the dot moves if the person is already walking around before pressing Start.
+  navigator.geolocation.watchPosition(
+    (position) => {
+      if (appState === 'idle') {
+        showLiveLocationMarker(position.coords.latitude, position.coords.longitude);
+      }
+    },
+    () => {},
+    { enableHighAccuracy: true, maximumAge: 2000 }
+  );
+}
+
+requestInitialLocation();
 
 // ---------------------------------------------------------------------
 // 4. Tracking state
