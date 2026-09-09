@@ -3,7 +3,95 @@
 const API_URL = 'https://focus-project-production.up.railway.app';
 
 // ---------------------------------------------------------------------
-// 1. Telegram init
+// 1. Translations
+// ---------------------------------------------------------------------
+const TRANSLATIONS = {
+  en: {
+    navTrack: 'Tracker', navHistory: 'History', navSettings: 'Settings',
+    statTimeLabel: 'time', statDistanceLabel: 'km', statPaceLabel: 'pace /km',
+    countdownLabel: 'Get ready', cancelBtn: 'Cancel',
+    startBtn: 'Start run', pauseBtn: 'Pause', resumeBtn: 'Resume', stopBtn: 'Finish',
+    totalRunsLabel: 'runs', totalDistanceLabel: 'km total',
+    languageLabel: 'Language', themeLabel: 'Theme', themeDark: 'Dark', themeLight: 'Light',
+    guestLabel: 'guest',
+    locatingMsg: 'Locating you…',
+    locationDenied: 'Allow location access in settings to see yourself on the map',
+    geoNotSupported: "Geolocation isn't supported on this device",
+    geoSignalFailed: "Couldn't get a GPS signal",
+    statusTracking: 'Tracking your route…',
+    statusPaused: 'Paused',
+    statusTooShort: 'Run too short — not saved',
+    statusSaving: 'Saving…',
+    statusSaved: (km) => `Saved: ${km} km`,
+    statusSaveFailed: "Couldn't save the run. Check your connection.",
+    historyLoading: 'Loading…',
+    historyLoadFailed: "Couldn't load history",
+    historyEmptyLine1: 'No runs yet.',
+    historyEmptyLine2: 'Start your first one on the Tracker tab.',
+    rowDistance: 'distance', rowTime: 'time', rowPace: 'pace /km',
+    months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  },
+  ru: {
+    navTrack: 'Трекер', navHistory: 'История', navSettings: 'Настройки',
+    statTimeLabel: 'время', statDistanceLabel: 'км', statPaceLabel: 'темп /км',
+    countdownLabel: 'Приготовьтесь', cancelBtn: 'Отмена',
+    startBtn: 'Начать пробежку', pauseBtn: 'Пауза', resumeBtn: 'Продолжить', stopBtn: 'Завершить',
+    totalRunsLabel: 'пробежек', totalDistanceLabel: 'км всего',
+    languageLabel: 'Язык', themeLabel: 'Тема', themeDark: 'Тёмная', themeLight: 'Светлая',
+    guestLabel: 'гость',
+    locatingMsg: 'Определяем ваше местоположение…',
+    locationDenied: 'Разрешите доступ к геолокации в настройках, чтобы видеть себя на карте',
+    geoNotSupported: 'Геолокация не поддерживается этим устройством',
+    geoSignalFailed: 'Не удалось получить GPS-сигнал',
+    statusTracking: 'Отслеживаем маршрут…',
+    statusPaused: 'На паузе',
+    statusTooShort: 'Слишком короткая пробежка — не сохранено',
+    statusSaving: 'Сохраняем…',
+    statusSaved: (km) => `Сохранено: ${km} км`,
+    statusSaveFailed: 'Не удалось сохранить пробежку. Проверьте соединение.',
+    historyLoading: 'Загружаем…',
+    historyLoadFailed: 'Не удалось загрузить историю',
+    historyEmptyLine1: 'Пока нет пробежек.',
+    historyEmptyLine2: 'Начните первую на вкладке «Трекер».',
+    rowDistance: 'дистанция', rowTime: 'время', rowPace: 'темп /км',
+    months: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
+  },
+  uk: {
+    navTrack: 'Трекер', navHistory: 'Історія', navSettings: 'Налаштування',
+    statTimeLabel: 'час', statDistanceLabel: 'км', statPaceLabel: 'темп /км',
+    countdownLabel: 'Приготуйтесь', cancelBtn: 'Скасувати',
+    startBtn: 'Почати пробіжку', pauseBtn: 'Пауза', resumeBtn: 'Продовжити', stopBtn: 'Завершити',
+    totalRunsLabel: 'пробіжок', totalDistanceLabel: 'км всього',
+    languageLabel: 'Мова', themeLabel: 'Тема', themeDark: 'Темна', themeLight: 'Світла',
+    guestLabel: 'гість',
+    locatingMsg: 'Визначаємо ваше місцезнаходження…',
+    locationDenied: 'Дозвольте доступ до геолокації в налаштуваннях, щоб бачити себе на карті',
+    geoNotSupported: 'Геолокація не підтримується цим пристроєм',
+    geoSignalFailed: 'Не вдалося отримати GPS-сигнал',
+    statusTracking: 'Відстежуємо маршрут…',
+    statusPaused: 'На паузі',
+    statusTooShort: 'Занадто коротка пробіжка — не збережено',
+    statusSaving: 'Зберігаємо…',
+    statusSaved: (km) => `Збережено: ${km} км`,
+    statusSaveFailed: "Не вдалося зберегти пробіжку. Перевірте з'єднання.",
+    historyLoading: 'Завантажуємо…',
+    historyLoadFailed: 'Не вдалося завантажити історію',
+    historyEmptyLine1: 'Поки немає пробіжок.',
+    historyEmptyLine2: 'Почніть першу на вкладці «Трекер».',
+    rowDistance: 'дистанція', rowTime: 'час', rowPace: 'темп /км',
+    months: ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'],
+  },
+};
+
+let currentLang = localStorage.getItem('runfocus_lang') || 'en';
+let currentTheme = localStorage.getItem('runfocus_theme') || 'dark';
+
+function t(key) {
+  return TRANSLATIONS[currentLang][key];
+}
+
+// ---------------------------------------------------------------------
+// 2. Telegram init
 // ---------------------------------------------------------------------
 const tg = window.Telegram?.WebApp;
 if (tg) {
@@ -14,12 +102,68 @@ if (tg) {
 const initData = tg?.initData || '';
 const tgUser = tg?.initDataUnsafe?.user;
 
-document.getElementById('username').textContent = tgUser
-  ? (tgUser.username ? '@' + tgUser.username : tgUser.first_name)
-  : 'гость';
+function applyUsername() {
+  document.getElementById('username').textContent = tgUser
+    ? (tgUser.username ? '@' + tgUser.username : tgUser.first_name)
+    : t('guestLabel');
+}
 
 // ---------------------------------------------------------------------
-// 2. Tab switching (Track / History)
+// 3. Language + theme application
+// ---------------------------------------------------------------------
+function applyLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('runfocus_lang', lang);
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+
+  document.querySelectorAll('#langOptions .option-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+
+  applyUsername();
+  document.getElementById('locatingMsg').textContent = t('locatingMsg');
+
+  // Re-label the pause/resume button if it's currently visible
+  if (els.pauseBtn.style.display !== 'none') {
+    els.pauseBtn.textContent = appState === 'paused' ? t('resumeBtn') : t('pauseBtn');
+  }
+
+  // Re-render history if that screen has data loaded
+  if (lastLoadedRuns) renderHistory(lastLoadedRuns);
+}
+
+function applyTheme(theme) {
+  currentTheme = theme;
+  localStorage.setItem('runfocus_theme', theme);
+  document.documentElement.classList.toggle('theme-light', theme === 'light');
+
+  document.querySelectorAll('#themeOptions .option-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.theme === theme);
+  });
+
+  if (tileContainer) {
+    tileContainer.style.filter = theme === 'light'
+      ? 'none'
+      : 'invert(94%) hue-rotate(210deg) brightness(0.9) contrast(0.85) saturate(0.45)';
+  }
+}
+
+document.getElementById('langOptions').addEventListener('click', (e) => {
+  const btn = e.target.closest('.option-btn');
+  if (btn) applyLanguage(btn.dataset.lang);
+});
+
+document.getElementById('themeOptions').addEventListener('click', (e) => {
+  const btn = e.target.closest('.option-btn');
+  if (btn) applyTheme(btn.dataset.theme);
+});
+
+// ---------------------------------------------------------------------
+// 4. Tab switching (Track / History / Settings)
 // ---------------------------------------------------------------------
 const screens = document.querySelectorAll('.screen');
 const navBtns = document.querySelectorAll('.navBtn');
@@ -31,11 +175,9 @@ navBtns.forEach((btn) => {
     screens.forEach((s) => s.classList.toggle('active', s.id === targetId));
     navBtns.forEach((b) => b.classList.toggle('active', b === btn));
 
-    // Leaflet needs a nudge to redraw correctly if it was hidden when resized
     if (targetId === 'trackScreen') {
       setTimeout(() => map.invalidateSize(), 50);
     }
-
     if (targetId === 'historyScreen') {
       loadHistory();
     }
@@ -43,24 +185,25 @@ navBtns.forEach((btn) => {
 });
 
 // ---------------------------------------------------------------------
-// 3. Map (dark tiles to match the theme)
+// 5. Map
 // ---------------------------------------------------------------------
-const map = L.map('map', { zoomControl: false }).setView([55.751244, 37.618423], 15);
+const map = L.map('map', { zoomControl: false });
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors',
   maxZoom: 19,
-  className: 'dark-tiles',
 }).addTo(map);
+
+const tileContainer = tileLayer.getContainer();
 
 let routeLine = L.polyline([], { color: '#9b81ff', weight: 5, opacity: 0.9 }).addTo(map);
 let userMarker = null;
 
 // ---------------------------------------------------------------------
-// 3b. Ask for GPS location immediately, before any run is started,
-// so the map centers on the person and shows where they are right away.
+// 5b. Live location on load
 // ---------------------------------------------------------------------
 let hasCenteredOnUser = false;
+const locatingMsgEl = document.getElementById('locatingMsg');
 
 function showLiveLocationMarker(lat, lon) {
   if (!userMarker) {
@@ -78,28 +221,25 @@ function showLiveLocationMarker(lat, lon) {
   if (!hasCenteredOnUser) {
     map.setView([lat, lon], 16);
     hasCenteredOnUser = true;
+    locatingMsgEl.classList.add('hidden');
   }
 }
 
 function requestInitialLocation() {
   if (!navigator.geolocation) {
-    setStatus('Геолокация не поддерживается этим устройством');
+    locatingMsgEl.textContent = t('geoNotSupported');
     return;
   }
 
   navigator.geolocation.getCurrentPosition(
-    (position) => {
-      showLiveLocationMarker(position.coords.latitude, position.coords.longitude);
-    },
+    (position) => showLiveLocationMarker(position.coords.latitude, position.coords.longitude),
     (err) => {
       console.error(err);
-      setStatus('Разрешите доступ к геолокации, чтобы видеть себя на карте');
+      locatingMsgEl.textContent = t('locationDenied');
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );
 
-  // Keep the marker updated with a lightweight watch even while idle,
-  // so the dot moves if the person is already walking around before pressing Start.
   navigator.geolocation.watchPosition(
     (position) => {
       if (appState === 'idle') {
@@ -114,19 +254,12 @@ function requestInitialLocation() {
 requestInitialLocation();
 
 // ---------------------------------------------------------------------
-// 4. Tracking state
+// 6. Tracking state machine: idle -> countdown -> running <-> paused
 // ---------------------------------------------------------------------
-// appState moves through: 'idle' -> 'countdown' -> 'running' <-> 'paused'
 let appState = 'idle';
 let watchId = null;
 let track = [];
 
-// Timing model: we keep a running total of "active" milliseconds (accumulatedMs),
-// plus the timestamp of when the current active segment began (segmentStart).
-// Elapsed time = accumulatedMs + (time since segmentStart, if currently running).
-// When paused, we freeze accumulatedMs and don't add anything until resumed.
-// New GPS points get their timestamp shifted back by total paused time, so the
-// final track has no time "gap" for the pause — distance/pace/duration stay correct.
 let accumulatedMs = 0;
 let segmentStart = null;
 let pauseOffsetMs = 0;
@@ -150,15 +283,11 @@ const els = {
   cancelCountdownBtn: document.getElementById('cancelCountdownBtn'),
 };
 
-// ---------------------------------------------------------------------
-// Start button: begins the countdown, not the tracking itself
-// ---------------------------------------------------------------------
 els.startBtn.addEventListener('click', () => {
   if (!navigator.geolocation) {
-    setStatus('Геолокация не поддерживается этим устройством');
+    setStatus(t('geoNotSupported'));
     return;
   }
-
   startCountdown();
 });
 
@@ -187,9 +316,6 @@ els.cancelCountdownBtn.addEventListener('click', () => {
   appState = 'idle';
 });
 
-// ---------------------------------------------------------------------
-// Actually begins GPS tracking, once the countdown finishes
-// ---------------------------------------------------------------------
 function beginRun() {
   appState = 'running';
   track = [];
@@ -199,10 +325,10 @@ function beginRun() {
 
   els.startBtn.style.display = 'none';
   els.pauseBtn.style.display = 'block';
-  els.pauseBtn.textContent = 'Пауза';
+  els.pauseBtn.textContent = t('pauseBtn');
   els.stopBtn.style.display = 'block';
   els.trackScreen.classList.add('running');
-  setStatus('Отслеживаем маршрут…');
+  setStatus(t('statusTracking'));
 
   watchId = navigator.geolocation.watchPosition(onNewPosition, onGeoError, {
     enableHighAccuracy: true,
@@ -213,9 +339,6 @@ function beginRun() {
   timerInterval = setInterval(updateTimerDisplay, 1000);
 }
 
-// ---------------------------------------------------------------------
-// Pause / resume
-// ---------------------------------------------------------------------
 els.pauseBtn.addEventListener('click', () => {
   if (appState === 'running') {
     pauseRun();
@@ -232,8 +355,8 @@ function pauseRun() {
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   if (timerInterval) clearInterval(timerInterval);
 
-  els.pauseBtn.textContent = 'Продолжить';
-  setStatus('На паузе');
+  els.pauseBtn.textContent = t('resumeBtn');
+  setStatus(t('statusPaused'));
 }
 
 function resumeRun() {
@@ -248,24 +371,20 @@ function resumeRun() {
   });
   timerInterval = setInterval(updateTimerDisplay, 1000);
 
-  els.pauseBtn.textContent = 'Пауза';
-  setStatus('Отслеживаем маршрут…');
+  els.pauseBtn.textContent = t('pauseBtn');
+  setStatus(t('statusTracking'));
 }
 
-// ---------------------------------------------------------------------
-// Stop / save
-// ---------------------------------------------------------------------
 els.stopBtn.addEventListener('click', async () => {
-  const wasPaused = appState === 'paused';
   stopTracking();
 
   if (track.length < 2) {
-    setStatus('Слишком короткая пробежка — не сохранено');
+    setStatus(t('statusTooShort'));
     resetUI();
     return;
   }
 
-  setStatus('Сохраняем…');
+  setStatus(t('statusSaving'));
 
   try {
     const res = await fetch(`${API_URL}/api/runs`, {
@@ -283,10 +402,10 @@ els.stopBtn.addEventListener('click', async () => {
     if (!res.ok) throw new Error('Server error');
 
     const data = await res.json();
-    setStatus(`Сохранено: ${data.run.distance_km.toFixed(2)} км`);
+    setStatus(t('statusSaved')(data.run.distance_km.toFixed(2)));
   } catch (err) {
     console.error(err);
-    setStatus('Не удалось сохранить пробежку. Проверьте соединение.');
+    setStatus(t('statusSaveFailed'));
   }
 
   resetUI();
@@ -319,7 +438,7 @@ function onNewPosition(position) {
 
 function onGeoError(err) {
   console.error(err);
-  setStatus('Не удалось получить GPS-сигнал');
+  setStatus(t('geoSignalFailed'));
 }
 
 function stopTracking() {
@@ -392,16 +511,15 @@ function formatPace(secPerKm) {
 function setStatus(text) { els.status.textContent = text; }
 
 // ---------------------------------------------------------------------
-// 5. History screen
+// 7. History screen
 // ---------------------------------------------------------------------
 const historyList = document.getElementById('historyList');
 const totalRunsEl = document.getElementById('totalRuns');
 const totalDistanceEl = document.getElementById('totalDistance');
-
-const MONTHS_RU = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+let lastLoadedRuns = null;
 
 async function loadHistory() {
-  historyList.innerHTML = '<div id="emptyHistory">Загружаем…</div>';
+  historyList.innerHTML = `<div id="emptyHistory">${t('historyLoading')}</div>`;
 
   try {
     const res = await fetch(`${API_URL}/api/runs`, {
@@ -411,10 +529,11 @@ async function loadHistory() {
     if (!res.ok) throw new Error('Server error');
 
     const data = await res.json();
+    lastLoadedRuns = data.runs;
     renderHistory(data.runs);
   } catch (err) {
     console.error(err);
-    historyList.innerHTML = '<div id="emptyHistory">Не удалось загрузить историю</div>';
+    historyList.innerHTML = `<div id="emptyHistory">${t('historyLoadFailed')}</div>`;
   }
 }
 
@@ -423,7 +542,7 @@ function renderHistory(runs) {
   totalDistanceEl.textContent = runs.reduce((sum, r) => sum + r.distance_km, 0).toFixed(1);
 
   if (runs.length === 0) {
-    historyList.innerHTML = '<div id="emptyHistory">Пока нет пробежек.<br>Начните первую на вкладке «Трекер».</div>';
+    historyList.innerHTML = `<div id="emptyHistory">${t('historyEmptyLine1')}<br>${t('historyEmptyLine2')}</div>`;
     return;
   }
 
@@ -432,7 +551,7 @@ function renderHistory(runs) {
 
 function runRowHtml(run) {
   const date = new Date(run.started_at);
-  const dateStr = `${date.getDate()} ${MONTHS_RU[date.getMonth()]}`;
+  const dateStr = `${date.getDate()} ${t('months')[date.getMonth()]}`;
   const paceStr = run.avg_pace_sec_per_km ? formatPace(run.avg_pace_sec_per_km) : '—:—';
 
   return `
@@ -442,19 +561,26 @@ function runRowHtml(run) {
         <div class="date">${dateStr}</div>
         <div class="row-stats">
           <div>
-            <div class="value">${run.distance_km.toFixed(2)}<span class="unit">км</span></div>
-            <div class="label">дистанция</div>
+            <div class="value">${run.distance_km.toFixed(2)}<span class="unit">km</span></div>
+            <div class="label">${t('rowDistance')}</div>
           </div>
           <div>
             <div class="value">${formatTime(run.duration_sec)}</div>
-            <div class="label">время</div>
+            <div class="label">${t('rowTime')}</div>
           </div>
           <div>
             <div class="value">${paceStr}</div>
-            <div class="label">темп /км</div>
+            <div class="label">${t('rowPace')}</div>
           </div>
         </div>
       </div>
     </div>
   `;
 }
+
+// ---------------------------------------------------------------------
+// 8. Initial setup
+// ---------------------------------------------------------------------
+document.documentElement.classList.toggle('theme-light', currentTheme === 'light');
+applyLanguage(currentLang);
+applyTheme(currentTheme);
