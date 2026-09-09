@@ -69,6 +69,16 @@
     font-size: 18px;
     font-weight: 800;
     letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #logoMark {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    flex-shrink: 0;
   }
 
   #topbar .wordmark span { color: var(--violet-bright); }
@@ -470,7 +480,26 @@
 
 <div id="app">
   <div id="topbar">
-    <div class="wordmark">Run<span>Focus</span></div>
+    <div class="wordmark">
+      <svg id="logoMark" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="bgSmall" cx="35%" cy="30%" r="85%">
+            <stop offset="0%" stop-color="#1c1830"/>
+            <stop offset="100%" stop-color="#0a0a0f"/>
+          </radialGradient>
+          <linearGradient id="strideSmall" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#7c5cff"/>
+            <stop offset="100%" stop-color="#c4b5ff"/>
+          </linearGradient>
+        </defs>
+        <rect width="512" height="512" rx="112" fill="url(#bgSmall)"/>
+        <circle cx="256" cy="256" r="150" fill="none" stroke="#332b52" stroke-width="16"/>
+        <circle cx="256" cy="256" r="104" fill="none" stroke="#332b52" stroke-width="16"/>
+        <path d="M 118 340 L 226 232 L 286 292 L 400 178" fill="none" stroke="url(#strideSmall)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="256" cy="256" r="22" fill="#f3f1f8"/>
+      </svg>
+      Run<span>Focus</span>
+    </div>
     <div id="topbarControls">
       <select id="langSelect" class="lang-pill">
         <option value="en">EN</option>
@@ -555,6 +584,6 @@
   </nav>
 </div>
 
-<script src="app.js?v=12"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>
