@@ -135,17 +135,10 @@ function applyLanguage(lang) {
     el.textContent = t(el.dataset.i18n);
   });
 
-  document.querySelectorAll('#langOptions .option-btn').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.lang === lang);
-  });
+  document.getElementById('langSelect').value = lang;
 
   applyUsername();
   document.getElementById('locatingMsg').textContent = t('locatingMsg');
-
-  const themeStateLabel = document.getElementById('themeSwitchState');
-  if (themeStateLabel) {
-    themeStateLabel.textContent = currentTheme === 'light' ? t('themeLight') : t('themeDark');
-  }
 
   // Re-label the pause/resume button if it's currently visible
   if (els.pauseBtn.style.display !== 'none') {
@@ -161,11 +154,12 @@ function applyTheme(theme) {
   localStorage.setItem('runfocus_theme', theme);
   document.documentElement.classList.toggle('theme-light', theme === 'light');
 
-  const themeSwitch = document.getElementById('themeSwitch');
-  if (themeSwitch) themeSwitch.checked = theme === 'light';
-
-  const stateLabel = document.getElementById('themeSwitchState');
-  if (stateLabel) stateLabel.textContent = theme === 'light' ? t('themeLight') : t('themeDark');
+  const themeIcon = document.getElementById('themeIcon');
+  if (themeIcon) {
+    themeIcon.innerHTML = theme === 'light'
+      ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
+      : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  }
 
   if (tileContainer) {
     tileContainer.style.filter = theme === 'light'
@@ -174,13 +168,12 @@ function applyTheme(theme) {
   }
 }
 
-document.getElementById('langOptions').addEventListener('click', (e) => {
-  const btn = e.target.closest('.option-btn');
-  if (btn) applyLanguage(btn.dataset.lang);
+document.getElementById('langSelect').addEventListener('change', (e) => {
+  applyLanguage(e.target.value);
 });
 
-document.getElementById('themeSwitch').addEventListener('change', (e) => {
-  applyTheme(e.target.checked ? 'light' : 'dark');
+document.getElementById('themeToggleBtn').addEventListener('click', () => {
+  applyTheme(currentTheme === 'light' ? 'dark' : 'light');
 });
 
 // ---------------------------------------------------------------------
