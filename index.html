@@ -5,33 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>RunTrack</title>
 
-<!-- Telegram's own SDK for Mini Apps — gives us initData, theme colors, etc. -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-<!-- Leaflet — a free, open-source map library -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
   :root {
-    --ink: #16261f;         /* dark green-black — main text */
-    --paper: #f4f2ec;       /* warm off-white background */
-    --trail: #3c6e47;       /* deep trail-green — primary actions */
-    --trail-dark: #2a4f33;
-    --spark: #e2572b;       /* burnt orange — stop / alert accent */
-    --line: #d9d5c8;        /* soft divider lines */
-    --muted: #6b7268;
+    --void: #0a0a0f;
+    --surface: #131120;
+    --surface-2: #1c1830;
+    --line: #262138;
+    --violet: #7c5cff;
+    --violet-bright: #9b81ff;
+    --violet-deep: #2d2350;
+    --ink: #f3f1f8;
+    --muted: #8f89a8;
   }
 
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
   html, body {
     margin: 0;
-    padding: 0;
     height: 100%;
-    background: var(--paper);
+    background: var(--void);
     color: var(--ink);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     overflow: hidden;
   }
 
@@ -44,75 +46,82 @@
 
   /* ---------- Top bar ---------- */
   #topbar {
-    padding: 14px 18px 10px;
+    padding: 16px 20px 12px;
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    border-bottom: 1px solid var(--line);
-    background: var(--paper);
-    z-index: 10;
+    flex-shrink: 0;
   }
 
   #topbar .wordmark {
-    font-size: 17px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
   }
 
-  #topbar .wordmark span { color: var(--trail); }
+  #topbar .wordmark span { color: var(--violet-bright); }
 
   #topbar .username {
     font-size: 13px;
     color: var(--muted);
   }
 
-  /* ---------- Map ---------- */
+  /* ---------- Screens ---------- */
+  main { flex: 1; min-height: 0; position: relative; }
+
+  .screen {
+    display: none;
+    height: 100%;
+    flex-direction: column;
+  }
+
+  .screen.active { display: flex; }
+
+  /* ---------- Track screen: map ---------- */
   #map {
     flex: 1;
     min-height: 0;
-    background: #e7e4d8;
+    background: var(--surface);
   }
 
-  /* ---------- Bottom stats sheet ---------- */
   #sheet {
-    background: var(--paper);
+    background: var(--surface);
     border-top: 1px solid var(--line);
-    padding: 18px 20px calc(18px + env(safe-area-inset-bottom));
-    z-index: 10;
+    padding: 18px 20px calc(16px + env(safe-area-inset-bottom));
+    flex-shrink: 0;
   }
 
   #stats {
     display: grid;
     grid-template-columns: 1.3fr 1fr 1fr;
     gap: 4px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
   }
 
   .stat .value {
-    font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
-    font-size: 30px;
-    font-weight: 600;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     line-height: 1.05;
     font-variant-numeric: tabular-nums;
+    color: var(--ink);
   }
 
-  .stat:first-child .value { font-size: 34px; color: var(--trail-dark); }
+  .stat:first-child .value { font-size: 36px; }
 
   .stat .label {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--muted);
     margin-top: 4px;
   }
 
-  #actionRow { display: flex; gap: 10px; }
-
-  button {
-    flex: 1;
+  #actionRow button {
+    width: 100%;
     border: none;
-    border-radius: 14px;
-    padding: 16px;
+    border-radius: 16px;
+    padding: 17px;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 700;
     font-family: inherit;
     cursor: pointer;
     transition: transform 0.08s ease, opacity 0.15s ease;
@@ -121,13 +130,15 @@
   button:active { transform: scale(0.97); }
 
   #startBtn {
-    background: var(--trail);
+    background: var(--violet);
     color: #fff;
+    box-shadow: 0 0 0 1px rgba(124,92,255,0.4), 0 8px 24px -8px rgba(124,92,255,0.6);
   }
 
   #stopBtn {
-    background: var(--spark);
-    color: #fff;
+    background: var(--surface-2);
+    color: var(--ink);
+    border: 1px solid var(--line) !important;
     display: none;
   }
 
@@ -139,7 +150,112 @@
     min-height: 16px;
   }
 
-  .running #stats .stat:first-child .value { color: var(--spark); }
+  .running .stat:first-child .value { color: var(--violet-bright); }
+
+  /* ---------- History screen ---------- */
+  #historyScreen { overflow-y: auto; padding: 4px 20px calc(16px + env(safe-area-inset-bottom)); }
+
+  #historySummary {
+    display: flex;
+    gap: 22px;
+    padding: 6px 4px 22px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 6px;
+  }
+
+  #historySummary .value {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  #historySummary .label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .run-row {
+    display: flex;
+    gap: 14px;
+    padding: 16px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .run-row .bar {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--violet);
+    flex-shrink: 0;
+  }
+
+  .run-row .content { flex: 1; min-width: 0; }
+
+  .run-row .date {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .run-row .row-stats {
+    display: flex;
+    gap: 20px;
+  }
+
+  .run-row .row-stats .value {
+    font-size: 18px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .run-row .row-stats .unit {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-left: 2px;
+  }
+
+  .run-row .row-stats .label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  #emptyHistory {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ---------- Bottom nav ---------- */
+  #bottomNav {
+    display: flex;
+    flex-shrink: 0;
+    border-top: 1px solid var(--line);
+    background: var(--void);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .navBtn {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 10px 0 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .navBtn svg { width: 22px; height: 22px; }
+  .navBtn.active { color: var(--violet-bright); }
 </style>
 </head>
 <body>
@@ -150,31 +266,57 @@
     <div class="username" id="username">—</div>
   </div>
 
-  <div id="map"></div>
-
-  <div id="sheet">
-    <div id="stats">
-      <div class="stat">
-        <div class="value" id="statTime">00:00</div>
-        <div class="label">время</div>
+  <main>
+    <section id="trackScreen" class="screen active">
+      <div id="map"></div>
+      <div id="sheet">
+        <div id="stats">
+          <div class="stat">
+            <div class="value" id="statTime">00:00</div>
+            <div class="label">время</div>
+          </div>
+          <div class="stat">
+            <div class="value" id="statDistance">0.00</div>
+            <div class="label">км</div>
+          </div>
+          <div class="stat">
+            <div class="value" id="statPace">—:—</div>
+            <div class="label">темп /км</div>
+          </div>
+        </div>
+        <div id="actionRow">
+          <button id="startBtn">Начать пробежку</button>
+          <button id="stopBtn">Завершить</button>
+        </div>
+        <div id="status"></div>
       </div>
-      <div class="stat">
-        <div class="value" id="statDistance">0.00</div>
-        <div class="label">км</div>
-      </div>
-      <div class="stat">
-        <div class="value" id="statPace">—:—</div>
-        <div class="label">темп /км</div>
-      </div>
-    </div>
+    </section>
 
-    <div id="actionRow">
-      <button id="startBtn">Начать пробежку</button>
-      <button id="stopBtn">Завершить</button>
-    </div>
+    <section id="historyScreen" class="screen">
+      <div id="historySummary">
+        <div>
+          <div class="value" id="totalRuns">0</div>
+          <div class="label">пробежек</div>
+        </div>
+        <div>
+          <div class="value" id="totalDistance">0</div>
+          <div class="label">км всего</div>
+        </div>
+      </div>
+      <div id="historyList"></div>
+    </section>
+  </main>
 
-    <div id="status"></div>
-  </div>
+  <nav id="bottomNav">
+    <button class="navBtn active" data-screen="trackScreen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+      Трекер
+    </button>
+    <button class="navBtn" data-screen="historyScreen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+      История
+    </button>
+  </nav>
 </div>
 
 <script src="app.js"></script>

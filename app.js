@@ -1,20 +1,14 @@
 // app.js
-// Вся логика фронтенда: подключение к Telegram, отслеживание GPS,
-// рисование маршрута на карте, отправка пробежки на backend.
 
-// ⚠️ Поменяй на адрес своего backend, когда он будет доступен по HTTPS
-// (например, через ngrok на этапе тестов или на реальный домен после деплоя).
 const API_URL = 'https://focus-project-production.up.railway.app';
 
 // ---------------------------------------------------------------------
-// 1. Инициализация Telegram Mini App
-// tg.initData — это та самая подписанная строка с данными пользователя,
-// которую backend проверяет в telegramAuth.js
+// 1. Telegram init
 // ---------------------------------------------------------------------
 const tg = window.Telegram?.WebApp;
 if (tg) {
   tg.ready();
-  tg.expand(); // разворачивает Mini App на весь экран
+  tg.expand();
 }
 
 const initData = tg?.initData || '';
@@ -25,24 +19,48 @@ document.getElementById('username').textContent = tgUser
   : 'гость';
 
 // ---------------------------------------------------------------------
-// 2. Карта (Leaflet)
+// 2. Tab switching (Track / History)
+// ---------------------------------------------------------------------
+const screens = document.querySelectorAll('.screen');
+const navBtns = document.querySelectorAll('.navBtn');
+
+navBtns.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.dataset.screen;
+
+    screens.forEach((s) => s.classList.toggle('active', s.id === targetId));
+    navBtns.forEach((b) => b.classList.toggle('active', b === btn));
+
+    // Leaflet needs a nudge to redraw correctly if it was hidden when resized
+    if (targetId === 'trackScreen') {
+      setTimeout(() => map.invalidateSize(), 50);
+    }
+
+    if (targetId === 'historyScreen') {
+      loadHistory();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------
+// 3. Map (dark tiles to match the theme)
 // ---------------------------------------------------------------------
 const map = L.map('map', { zoomControl: false }).setView([55.751244, 37.618423], 15);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors',
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO',
   maxZoom: 19,
 }).addTo(map);
 
-let routeLine = L.polyline([], { color: '#3c6e47', weight: 5 }).addTo(map);
+let routeLine = L.polyline([], { color: '#9b81ff', weight: 5, opacity: 0.9 }).addTo(map);
 let userMarker = null;
 
 // ---------------------------------------------------------------------
-// 3. Состояние трекинга (state)
+// 4. Tracking state
 // ---------------------------------------------------------------------
 let isTracking = false;
 let watchId = null;
-let track = [];        // массив точек { lat, lon, timestamp }
+let track = [];
 let startedAt = null;
 let timerInterval = null;
 
@@ -53,12 +71,9 @@ const els = {
   distance: document.getElementById('statDistance'),
   pace: document.getElementById('statPace'),
   status: document.getElementById('status'),
-  app: document.getElementById('app'),
+  trackScreen: document.getElementById('trackScreen'),
 };
 
-// ---------------------------------------------------------------------
-// 4. Кнопка "Начать пробежку"
-// ---------------------------------------------------------------------
 els.startBtn.addEventListener('click', () => {
   if (!navigator.geolocation) {
     setStatus('Геолокация не поддерживается этим устройством');
@@ -71,11 +86,9 @@ els.startBtn.addEventListener('click', () => {
 
   els.startBtn.style.display = 'none';
   els.stopBtn.style.display = 'block';
-  els.app.classList.add('running');
+  els.trackScreen.classList.add('running');
   setStatus('Отслеживаем маршрут…');
 
-  // watchPosition — браузерный API, который вызывает наш callback
-  // каждый раз, когда телефон получает новые координаты GPS.
   watchId = navigator.geolocation.watchPosition(onNewPosition, onGeoError, {
     enableHighAccuracy: true,
     maximumAge: 1000,
@@ -85,9 +98,6 @@ els.startBtn.addEventListener('click', () => {
   timerInterval = setInterval(updateTimerDisplay, 1000);
 });
 
-// ---------------------------------------------------------------------
-// 5. Кнопка "Завершить"
-// ---------------------------------------------------------------------
 els.stopBtn.addEventListener('click', async () => {
   stopTracking();
 
@@ -124,10 +134,6 @@ els.stopBtn.addEventListener('click', async () => {
   resetUI();
 });
 
-// ---------------------------------------------------------------------
-// Вспомогательные функции
-// ---------------------------------------------------------------------
-
 function onNewPosition(position) {
   const point = {
     lat: position.coords.latitude,
@@ -136,16 +142,14 @@ function onNewPosition(position) {
   };
 
   track.push(point);
-
-  // Обновляем линию маршрута на карте
   routeLine.addLatLng([point.lat, point.lon]);
   map.setView([point.lat, point.lon]);
 
   if (!userMarker) {
     userMarker = L.circleMarker([point.lat, point.lon], {
       radius: 7,
-      color: '#e2572b',
-      fillColor: '#e2572b',
+      color: '#9b81ff',
+      fillColor: '#9b81ff',
       fillOpacity: 1,
     }).addTo(map);
   } else {
@@ -169,7 +173,7 @@ function stopTracking() {
 function resetUI() {
   els.startBtn.style.display = 'block';
   els.stopBtn.style.display = 'none';
-  els.app.classList.remove('running');
+  els.trackScreen.classList.remove('running');
 }
 
 function updateTimerDisplay() {
@@ -188,9 +192,6 @@ function updateStatsDisplay() {
   }
 }
 
-// Простой расчёт дистанции на клиенте — только для того, чтобы
-// показывать live-статистику во время бега. Финальный, "официальный"
-// расчёт всегда делает backend — клиенту в этом вопросе не доверяем.
 function calculateTrackDistanceClientSide(points) {
   let total = 0;
   for (let i = 1; i < points.length; i++) {
@@ -209,9 +210,7 @@ function haversine(a, b) {
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
-function toRad(deg) {
-  return (deg * Math.PI) / 180;
-}
+function toRad(deg) { return (deg * Math.PI) / 180; }
 
 function formatTime(totalSec) {
   const m = String(Math.floor(totalSec / 60)).padStart(2, '0');
@@ -225,6 +224,72 @@ function formatPace(secPerKm) {
   return `${m}:${s}`;
 }
 
-function setStatus(text) {
-  els.status.textContent = text;
+function setStatus(text) { els.status.textContent = text; }
+
+// ---------------------------------------------------------------------
+// 5. History screen
+// ---------------------------------------------------------------------
+const historyList = document.getElementById('historyList');
+const totalRunsEl = document.getElementById('totalRuns');
+const totalDistanceEl = document.getElementById('totalDistance');
+
+const MONTHS_RU = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+async function loadHistory() {
+  historyList.innerHTML = '<div id="emptyHistory">Загружаем…</div>';
+
+  try {
+    const res = await fetch(`${API_URL}/api/runs`, {
+      headers: { 'X-Telegram-Init-Data': initData },
+    });
+
+    if (!res.ok) throw new Error('Server error');
+
+    const data = await res.json();
+    renderHistory(data.runs);
+  } catch (err) {
+    console.error(err);
+    historyList.innerHTML = '<div id="emptyHistory">Не удалось загрузить историю</div>';
+  }
+}
+
+function renderHistory(runs) {
+  totalRunsEl.textContent = runs.length;
+  totalDistanceEl.textContent = runs.reduce((sum, r) => sum + r.distance_km, 0).toFixed(1);
+
+  if (runs.length === 0) {
+    historyList.innerHTML = '<div id="emptyHistory">Пока нет пробежек.<br>Начните первую на вкладке «Трекер».</div>';
+    return;
+  }
+
+  historyList.innerHTML = runs.map(runRowHtml).join('');
+}
+
+function runRowHtml(run) {
+  const date = new Date(run.started_at);
+  const dateStr = `${date.getDate()} ${MONTHS_RU[date.getMonth()]}`;
+  const paceStr = run.avg_pace_sec_per_km ? formatPace(run.avg_pace_sec_per_km) : '—:—';
+
+  return `
+    <div class="run-row">
+      <div class="bar"></div>
+      <div class="content">
+        <div class="date">${dateStr}</div>
+        <div class="row-stats">
+          <div>
+            <div class="value">${run.distance_km.toFixed(2)}<span class="unit">км</span></div>
+            <div class="label">дистанция</div>
+          </div>
+          <div>
+            <div class="value">${formatTime(run.duration_sec)}</div>
+            <div class="label">время</div>
+          </div>
+          <div>
+            <div class="value">${paceStr}</div>
+            <div class="label">темп /км</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
 }
