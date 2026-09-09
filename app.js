@@ -144,7 +144,7 @@ function applyLanguage(lang) {
 
   // Re-label the pause/resume button if it's currently visible
   if (els.pauseBtn.style.display !== 'none') {
-    els.pauseBtn.textContent = appState === 'paused' ? t('resumeBtn') : t('pauseBtn');
+    setPauseButtonState(appState === 'paused');
   }
 
   // Re-render history if that screen has data loaded
@@ -165,6 +165,13 @@ function applyTheme(theme) {
       ? 'none'
       : 'invert(94%) hue-rotate(210deg) brightness(0.9) contrast(0.85) saturate(0.45)';
   }
+
+  // Re-filter any history mini-maps currently on screen
+  document.querySelectorAll('.run-card-map .leaflet-tile-pane').forEach((pane) => {
+    pane.style.filter = theme === 'light'
+      ? 'none'
+      : 'invert(94%) hue-rotate(210deg) brightness(0.9) contrast(0.85) saturate(0.45)';
+  });
 }
 
 document.getElementById('langOptions').addEventListener('click', (e) => {
@@ -287,6 +294,8 @@ const COUNTDOWN_SECONDS = 15;
 const els = {
   startBtn: document.getElementById('startBtn'),
   pauseBtn: document.getElementById('pauseBtn'),
+  pauseBtnText: document.getElementById('pauseBtnText'),
+  pauseIcon: document.getElementById('pauseIcon'),
   stopBtn: document.getElementById('stopBtn'),
   time: document.getElementById('statTime'),
   distance: document.getElementById('statDistance'),
@@ -298,6 +307,14 @@ const els = {
   cancelCountdownBtn: document.getElementById('cancelCountdownBtn'),
   skipCountdownBtn: document.getElementById('skipCountdownBtn'),
 };
+
+const PAUSE_ICON = '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>';
+const PLAY_ICON = '<path d="M7 4l13 8-13 8V4z"/>';
+
+function setPauseButtonState(isPaused) {
+  els.pauseBtnText.textContent = isPaused ? t('resumeBtn') : t('pauseBtn');
+  els.pauseIcon.innerHTML = isPaused ? PLAY_ICON : PAUSE_ICON;
+}
 
 els.startBtn.addEventListener('click', () => {
   if (!navigator.geolocation) {
@@ -346,9 +363,9 @@ function beginRun() {
   segmentStart = Date.now();
 
   els.startBtn.style.display = 'none';
-  els.pauseBtn.style.display = 'block';
-  els.pauseBtn.textContent = t('pauseBtn');
-  els.stopBtn.style.display = 'block';
+  els.pauseBtn.style.display = 'flex';
+  setPauseButtonState(false);
+  els.stopBtn.style.display = 'flex';
   els.trackScreen.classList.add('running');
   setStatus(t('statusTracking'));
 
@@ -377,7 +394,7 @@ function pauseRun() {
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   if (timerInterval) clearInterval(timerInterval);
 
-  els.pauseBtn.textContent = t('resumeBtn');
+  setPauseButtonState(true);
   setStatus(t('statusPaused'));
 }
 
@@ -393,7 +410,7 @@ function resumeRun() {
   });
   timerInterval = setInterval(updateTimerDisplay, 1000);
 
-  els.pauseBtn.textContent = t('pauseBtn');
+  setPauseButtonState(false);
   setStatus(t('statusTracking'));
 }
 
@@ -564,11 +581,21 @@ function renderHistory(runs) {
   totalDistanceEl.textContent = runs.reduce((sum, r) => sum + r.distance_km, 0).toFixed(1);
 
   if (runs.length === 0) {
+    destroyHistoryMaps();
     historyList.innerHTML = `<div id="emptyHistory">${t('historyEmptyLine1')}<br>${t('historyEmptyLine2')}</div>`;
     return;
   }
 
   historyList.innerHTML = runs.map(runRowHtml).join('');
+  initHistoryMaps(runs);
+}
+
+function parseTrack(rawTrack) {
+  try {
+    return typeof rawTrack === 'string' ? JSON.parse(rawTrack) : (rawTrack || []);
+  } catch (e) {
+    return [];
+  }
 }
 
 function runRowHtml(run) {
@@ -577,11 +604,6 @@ function runRowHtml(run) {
   const paceStr = run.avg_pace_sec_per_km ? formatPace(run.avg_pace_sec_per_km) : '—:—';
   const durationStr = formatTime(run.duration_sec);
   const distanceStr = run.distance_km.toFixed(2);
-
-  let track = [];
-  try {
-    track = typeof run.gps_track === 'string' ? JSON.parse(run.gps_track) : (run.gps_track || []);
-  } catch (e) { track = []; }
 
   return `
     <div class="run-card">
@@ -603,7 +625,7 @@ function runRowHtml(run) {
           <div class="label">${t('cardPace')}</div>
         </div>
       </div>
-      <div class="run-card-map">${routeThumbnailSvg(track)}</div>
+      <div class="run-card-map" id="runMap-${run.id}"></div>
       <div class="run-card-footer">
         <button class="share-btn" data-distance="${distanceStr}" data-duration="${durationStr}" data-pace="${paceStr}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>
@@ -614,41 +636,56 @@ function runRowHtml(run) {
   `;
 }
 
-// Draws the run's GPS path as a simple SVG line, roughly correcting for
-// longitude/latitude distortion so the shape isn't visually stretched.
-function routeThumbnailSvg(track) {
-  if (!track || track.length < 2) {
-    return '<svg viewBox="0 0 300 130"></svg>';
-  }
+// Each run card gets its own small, non-interactive Leaflet map showing the
+// real route drawn over real map tiles — same tile source as the main tracker.
+let historyMapInstances = [];
 
-  // Sample down long tracks so the SVG path string stays small
-  const maxPoints = 150;
-  const stride = Math.max(1, Math.floor(track.length / maxPoints));
-  const points = track.filter((_, i) => i % stride === 0);
-
-  const lats = points.map((p) => p.lat);
-  const lons = points.map((p) => p.lon);
-  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-  const minLon = Math.min(...lons), maxLon = Math.max(...lons);
-  const avgLat = (minLat + maxLat) / 2;
-  const lonCorrection = Math.cos((avgLat * Math.PI) / 180);
-
-  const width = 300, height = 130, padding = 18;
-  const spanLat = Math.max(maxLat - minLat, 0.0001);
-  const spanLon = Math.max((maxLon - minLon) * lonCorrection, 0.0001);
-  const scale = Math.min((width - padding * 2) / spanLon, (height - padding * 2) / spanLat);
-
-  const coords = points.map((p) => {
-    const x = padding + ((p.lon - minLon) * lonCorrection) * scale;
-    const y = height - padding - (p.lat - minLat) * scale;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
+function destroyHistoryMaps() {
+  historyMapInstances.forEach((m) => {
+    try { m.remove(); } catch (e) {}
   });
+  historyMapInstances = [];
+}
 
-  return `
-    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
-      <polyline points="${coords.join(' ')}" fill="none" stroke="#9b81ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-    </svg>
-  `;
+function initHistoryMaps(runs) {
+  destroyHistoryMaps();
+
+  runs.forEach((run) => {
+    const track = parseTrack(run.gps_track);
+    if (track.length < 2) return;
+
+    const containerId = `runMap-${run.id}`;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const miniMap = L.map(containerId, {
+      zoomControl: false,
+      dragging: false,
+      touchZoom: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      tap: false,
+      attributionControl: false,
+    });
+
+    const miniTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    }).addTo(miniMap);
+
+    if (currentTheme !== 'light') {
+      miniTile.getContainer().style.filter =
+        'invert(94%) hue-rotate(210deg) brightness(0.9) contrast(0.85) saturate(0.45)';
+    }
+
+    const latlngs = track.map((p) => [p.lat, p.lon]);
+    const line = L.polyline(latlngs, { color: '#9b81ff', weight: 4, opacity: 0.95 }).addTo(miniMap);
+
+    miniMap.fitBounds(line.getBounds(), { padding: [16, 16] });
+
+    historyMapInstances.push(miniMap);
+  });
 }
 
 historyList.addEventListener('click', (e) => {
