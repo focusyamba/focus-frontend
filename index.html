@@ -180,7 +180,13 @@
 
   #actionRow {
     display: flex;
+    justify-content: center;
     gap: 10px;
+  }
+
+  #startBtn {
+    flex: 0 0 auto;
+    padding: 14px 40px;
   }
 
   #actionRow button {
@@ -302,11 +308,31 @@
 
   #historySummary {
     display: flex;
+    align-items: center;
     gap: 22px;
     padding: 6px 4px 22px;
     border-bottom: 1px solid var(--line);
     margin-bottom: 6px;
   }
+
+  #historySummary > div:first-child,
+  #historySummary > div:nth-child(2) { flex-shrink: 0; }
+
+  #clearHistoryBtn {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    align-self: center;
+  }
+
+  #clearHistoryBtn:active { color: #ef4b6a; border-color: rgba(239,75,106,0.4); }
 
   #historySummary .value {
     font-size: 22px;
@@ -487,10 +513,7 @@
       </div>
       <div id="bottomBar">
         <div id="actionRow">
-          <button id="startBtn">
-            <span data-i18n="startBtn">Start run</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </button>
+          <button id="startBtn" data-i18n="startBtn">Start</button>
           <button id="pauseBtn">
             <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
             <span id="pauseBtnText" data-i18n="pauseBtn">Pause</span>
@@ -514,6 +537,7 @@
           <div class="value" id="totalDistance">0</div>
           <div class="label" data-i18n="totalDistanceLabel">km total</div>
         </div>
+        <button id="clearHistoryBtn" data-i18n="clearHistoryBtn">Clear</button>
       </div>
       <div id="historyList"></div>
     </section>
@@ -531,6 +555,6 @@
   </nav>
 </div>
 
-<script src="app.js?v=11"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

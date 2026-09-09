@@ -10,7 +10,7 @@ const TRANSLATIONS = {
     navTrack: 'Tracker', navHistory: 'History', navSettings: 'Settings',
     statTimeLabel: 'time', statDistanceLabel: 'km', statPaceLabel: 'pace /km',
     countdownLabel: 'Get ready', cancelBtn: 'Cancel', skipBtn: 'Start now',
-    startBtn: 'Start run', pauseBtn: 'Pause', resumeBtn: 'Resume', stopBtn: 'Finish',
+    startBtn: 'Start', pauseBtn: 'Pause', resumeBtn: 'Resume', stopBtn: 'Finish',
     totalRunsLabel: 'runs', totalDistanceLabel: 'km total',
     languageLabel: 'Language', themeLabel: 'Theme', themeDark: 'Dark', themeLight: 'Light',
     guestLabel: 'guest',
@@ -31,16 +31,15 @@ const TRANSLATIONS = {
     rowDistance: 'distance', rowTime: 'time', rowPace: 'pace /km',
     activityType: 'RUNNING',
     cardDistance: 'DISTANCE', cardDuration: 'DURATION', cardPace: 'AVG PACE',
-    shareBtn: 'Share',
-    shareText: (km, time, pace) => `Ran ${km} km in ${time} (${pace}/km) — tracked with RunFocus`,
-    shareCopied: 'Copied to clipboard',
+    clearHistoryBtn: 'Clear',
+    clearHistoryConfirm: "Delete all run history? This can't be undone.",
     months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   },
   ru: {
     navTrack: 'Трекер', navHistory: 'История', navSettings: 'Настройки',
     statTimeLabel: 'время', statDistanceLabel: 'км', statPaceLabel: 'темп /км',
     countdownLabel: 'Приготовьтесь', cancelBtn: 'Отмена', skipBtn: 'Начать сейчас',
-    startBtn: 'Начать пробежку', pauseBtn: 'Пауза', resumeBtn: 'Продолжить', stopBtn: 'Завершить',
+    startBtn: 'Старт', pauseBtn: 'Пауза', resumeBtn: 'Продолжить', stopBtn: 'Завершить',
     totalRunsLabel: 'пробежек', totalDistanceLabel: 'км всего',
     languageLabel: 'Язык', themeLabel: 'Тема', themeDark: 'Тёмная', themeLight: 'Светлая',
     guestLabel: 'гость',
@@ -61,16 +60,15 @@ const TRANSLATIONS = {
     rowDistance: 'дистанция', rowTime: 'время', rowPace: 'темп /км',
     activityType: 'БЕГ',
     cardDistance: 'ДИСТАНЦИЯ', cardDuration: 'ДЛИТЕЛЬНОСТЬ', cardPace: 'СР. ТЕМП',
-    shareBtn: 'Поделиться',
-    shareText: (km, time, pace) => `Пробежал ${km} км за ${time} (${pace}/км) — трек в RunFocus`,
-    shareCopied: 'Скопировано в буфер обмена',
+    clearHistoryBtn: 'Очистить',
+    clearHistoryConfirm: 'Удалить всю историю пробежек? Это необратимо.',
     months: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
   },
   uk: {
     navTrack: 'Трекер', navHistory: 'Історія', navSettings: 'Налаштування',
     statTimeLabel: 'час', statDistanceLabel: 'км', statPaceLabel: 'темп /км',
     countdownLabel: 'Приготуйтесь', cancelBtn: 'Скасувати', skipBtn: 'Почати зараз',
-    startBtn: 'Почати пробіжку', pauseBtn: 'Пауза', resumeBtn: 'Продовжити', stopBtn: 'Завершити',
+    startBtn: 'Старт', pauseBtn: 'Пауза', resumeBtn: 'Продовжити', stopBtn: 'Завершити',
     totalRunsLabel: 'пробіжок', totalDistanceLabel: 'км всього',
     languageLabel: 'Мова', themeLabel: 'Тема', themeDark: 'Темна', themeLight: 'Світла',
     guestLabel: 'гість',
@@ -91,9 +89,8 @@ const TRANSLATIONS = {
     rowDistance: 'дистанція', rowTime: 'час', rowPace: 'темп /км',
     activityType: 'БІГ',
     cardDistance: 'ДИСТАНЦІЯ', cardDuration: 'ТРИВАЛІСТЬ', cardPace: 'СЕР. ТЕМП',
-    shareBtn: 'Поділитися',
-    shareText: (km, time, pace) => `Пробіг ${km} км за ${time} (${pace}/км) — трек у RunFocus`,
-    shareCopied: 'Скопійовано в буфер обміну',
+    clearHistoryBtn: 'Очистити',
+    clearHistoryConfirm: 'Видалити всю історію пробіжок? Це незворотно.',
     months: ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'],
   },
 };
@@ -580,6 +577,30 @@ function renderHistory(runs) {
   historyList.innerHTML = runs.map(runRowHtml).join('');
 }
 
+document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+  const message = t('clearHistoryConfirm');
+
+  const doClear = async () => {
+    try {
+      await fetch(`${API_URL}/api/runs`, {
+        method: 'DELETE',
+        headers: { 'X-Telegram-Init-Data': initData },
+      });
+      loadHistory();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (tg?.showConfirm) {
+    tg.showConfirm(message, (confirmed) => {
+      if (confirmed) doClear();
+    });
+  } else if (window.confirm(message)) {
+    doClear();
+  }
+});
+
 function parseTrack(rawTrack) {
   try {
     return typeof rawTrack === 'string' ? JSON.parse(rawTrack) : (rawTrack || []);
@@ -591,6 +612,7 @@ function parseTrack(rawTrack) {
 function runRowHtml(run) {
   const date = new Date(run.started_at);
   const dateStr = `${date.getDate()} ${t('months')[date.getMonth()]}`;
+  const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   const paceStr = run.avg_pace_sec_per_km ? formatPace(run.avg_pace_sec_per_km) : '—:—';
   const durationStr = formatTime(run.duration_sec);
   const distanceStr = run.distance_km.toFixed(2);
@@ -599,7 +621,7 @@ function runRowHtml(run) {
     <div class="run-card">
       <div class="run-card-header">
         <div class="run-card-type">${t('activityType')}</div>
-        <div class="run-card-date">${dateStr}</div>
+        <div class="run-card-date">${dateStr}, ${timeStr}</div>
       </div>
       <div class="run-card-stats">
         <div>
