@@ -29,6 +29,11 @@ const TRANSLATIONS = {
     historyEmptyLine1: 'No runs yet.',
     historyEmptyLine2: 'Start your first one on the Tracker tab.',
     rowDistance: 'distance', rowTime: 'time', rowPace: 'pace /km',
+    activityType: 'RUNNING',
+    cardDistance: 'DISTANCE', cardDuration: 'DURATION', cardPace: 'AVG PACE',
+    shareBtn: 'Share',
+    shareText: (km, time, pace) => `Ran ${km} km in ${time} (${pace}/km) — tracked with RunFocus`,
+    shareCopied: 'Copied to clipboard',
     months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   },
   ru: {
@@ -54,6 +59,11 @@ const TRANSLATIONS = {
     historyEmptyLine1: 'Пока нет пробежек.',
     historyEmptyLine2: 'Начните первую на вкладке «Трекер».',
     rowDistance: 'дистанция', rowTime: 'время', rowPace: 'темп /км',
+    activityType: 'БЕГ',
+    cardDistance: 'ДИСТАНЦИЯ', cardDuration: 'ДЛИТЕЛЬНОСТЬ', cardPace: 'СР. ТЕМП',
+    shareBtn: 'Поделиться',
+    shareText: (km, time, pace) => `Пробежал ${km} км за ${time} (${pace}/км) — трек в RunFocus`,
+    shareCopied: 'Скопировано в буфер обмена',
     months: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
   },
   uk: {
@@ -79,6 +89,11 @@ const TRANSLATIONS = {
     historyEmptyLine1: 'Поки немає пробіжок.',
     historyEmptyLine2: 'Почніть першу на вкладці «Трекер».',
     rowDistance: 'дистанція', rowTime: 'час', rowPace: 'темп /км',
+    activityType: 'БІГ',
+    cardDistance: 'ДИСТАНЦІЯ', cardDuration: 'ТРИВАЛІСТЬ', cardPace: 'СЕР. ТЕМП',
+    shareBtn: 'Поділитися',
+    shareText: (km, time, pace) => `Пробіг ${km} км за ${time} (${pace}/км) — трек у RunFocus`,
+    shareCopied: 'Скопійовано в буфер обміну',
     months: ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'],
   },
 };
@@ -560,29 +575,98 @@ function runRowHtml(run) {
   const date = new Date(run.started_at);
   const dateStr = `${date.getDate()} ${t('months')[date.getMonth()]}`;
   const paceStr = run.avg_pace_sec_per_km ? formatPace(run.avg_pace_sec_per_km) : '—:—';
+  const durationStr = formatTime(run.duration_sec);
+  const distanceStr = run.distance_km.toFixed(2);
+
+  let track = [];
+  try {
+    track = typeof run.gps_track === 'string' ? JSON.parse(run.gps_track) : (run.gps_track || []);
+  } catch (e) { track = []; }
 
   return `
-    <div class="run-row">
-      <div class="bar"></div>
-      <div class="content">
-        <div class="date">${dateStr}</div>
-        <div class="row-stats">
-          <div>
-            <div class="value">${run.distance_km.toFixed(2)}<span class="unit">km</span></div>
-            <div class="label">${t('rowDistance')}</div>
-          </div>
-          <div>
-            <div class="value">${formatTime(run.duration_sec)}</div>
-            <div class="label">${t('rowTime')}</div>
-          </div>
-          <div>
-            <div class="value">${paceStr}</div>
-            <div class="label">${t('rowPace')}</div>
-          </div>
+    <div class="run-card">
+      <div class="run-card-header">
+        <div class="run-card-type">${t('activityType')}</div>
+        <div class="run-card-date">${dateStr}</div>
+      </div>
+      <div class="run-card-stats">
+        <div>
+          <div class="value">${distanceStr}</div>
+          <div class="label">${t('cardDistance')}</div>
         </div>
+        <div>
+          <div class="value">${durationStr}</div>
+          <div class="label">${t('cardDuration')}</div>
+        </div>
+        <div>
+          <div class="value">${paceStr}</div>
+          <div class="label">${t('cardPace')}</div>
+        </div>
+      </div>
+      <div class="run-card-map">${routeThumbnailSvg(track)}</div>
+      <div class="run-card-footer">
+        <button class="share-btn" data-distance="${distanceStr}" data-duration="${durationStr}" data-pace="${paceStr}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>
+          ${t('shareBtn')}
+        </button>
       </div>
     </div>
   `;
+}
+
+// Draws the run's GPS path as a simple SVG line, roughly correcting for
+// longitude/latitude distortion so the shape isn't visually stretched.
+function routeThumbnailSvg(track) {
+  if (!track || track.length < 2) {
+    return '<svg viewBox="0 0 300 130"></svg>';
+  }
+
+  // Sample down long tracks so the SVG path string stays small
+  const maxPoints = 150;
+  const stride = Math.max(1, Math.floor(track.length / maxPoints));
+  const points = track.filter((_, i) => i % stride === 0);
+
+  const lats = points.map((p) => p.lat);
+  const lons = points.map((p) => p.lon);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+  const avgLat = (minLat + maxLat) / 2;
+  const lonCorrection = Math.cos((avgLat * Math.PI) / 180);
+
+  const width = 300, height = 130, padding = 18;
+  const spanLat = Math.max(maxLat - minLat, 0.0001);
+  const spanLon = Math.max((maxLon - minLon) * lonCorrection, 0.0001);
+  const scale = Math.min((width - padding * 2) / spanLon, (height - padding * 2) / spanLat);
+
+  const coords = points.map((p) => {
+    const x = padding + ((p.lon - minLon) * lonCorrection) * scale;
+    const y = height - padding - (p.lat - minLat) * scale;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+
+  return `
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
+      <polyline points="${coords.join(' ')}" fill="none" stroke="#9b81ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  `;
+}
+
+historyList.addEventListener('click', (e) => {
+  const btn = e.target.closest('.share-btn');
+  if (!btn) return;
+  shareRun(btn.dataset.distance, btn.dataset.duration, btn.dataset.pace);
+});
+
+function shareRun(distance, duration, pace) {
+  const text = t('shareText')(distance, duration, pace);
+
+  if (navigator.share) {
+    navigator.share({ text }).catch(() => {});
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      setStatus(t('shareCopied'));
+    }).catch(() => {});
+  }
 }
 
 // ---------------------------------------------------------------------
