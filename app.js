@@ -142,6 +142,11 @@ function applyLanguage(lang) {
   applyUsername();
   document.getElementById('locatingMsg').textContent = t('locatingMsg');
 
+  const themeStateLabel = document.getElementById('themeSwitchState');
+  if (themeStateLabel) {
+    themeStateLabel.textContent = currentTheme === 'light' ? t('themeLight') : t('themeDark');
+  }
+
   // Re-label the pause/resume button if it's currently visible
   if (els.pauseBtn.style.display !== 'none') {
     setPauseButtonState(appState === 'paused');
@@ -156,22 +161,17 @@ function applyTheme(theme) {
   localStorage.setItem('runfocus_theme', theme);
   document.documentElement.classList.toggle('theme-light', theme === 'light');
 
-  document.querySelectorAll('#themeOptions .option-btn').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.theme === theme);
-  });
+  const themeSwitch = document.getElementById('themeSwitch');
+  if (themeSwitch) themeSwitch.checked = theme === 'light';
+
+  const stateLabel = document.getElementById('themeSwitchState');
+  if (stateLabel) stateLabel.textContent = theme === 'light' ? t('themeLight') : t('themeDark');
 
   if (tileContainer) {
     tileContainer.style.filter = theme === 'light'
       ? 'none'
       : 'invert(94%) hue-rotate(210deg) brightness(0.9) contrast(0.85) saturate(0.45)';
   }
-
-  // Re-filter any history mini-maps currently on screen
-  document.querySelectorAll('.run-card-map .leaflet-tile-pane').forEach((pane) => {
-    pane.style.filter = theme === 'light'
-      ? 'none'
-      : 'invert(94%) hue-rotate(210deg) brightness(0.9) contrast(0.85) saturate(0.45)';
-  });
 }
 
 document.getElementById('langOptions').addEventListener('click', (e) => {
@@ -179,9 +179,8 @@ document.getElementById('langOptions').addEventListener('click', (e) => {
   if (btn) applyLanguage(btn.dataset.lang);
 });
 
-document.getElementById('themeOptions').addEventListener('click', (e) => {
-  const btn = e.target.closest('.option-btn');
-  if (btn) applyTheme(btn.dataset.theme);
+document.getElementById('themeSwitch').addEventListener('change', (e) => {
+  applyTheme(e.target.checked ? 'light' : 'dark');
 });
 
 // ---------------------------------------------------------------------
@@ -581,13 +580,11 @@ function renderHistory(runs) {
   totalDistanceEl.textContent = runs.reduce((sum, r) => sum + r.distance_km, 0).toFixed(1);
 
   if (runs.length === 0) {
-    destroyHistoryMaps();
     historyList.innerHTML = `<div id="emptyHistory">${t('historyEmptyLine1')}<br>${t('historyEmptyLine2')}</div>`;
     return;
   }
 
   historyList.innerHTML = runs.map(runRowHtml).join('');
-  initHistoryMaps(runs);
 }
 
 function parseTrack(rawTrack) {
@@ -625,97 +622,8 @@ function runRowHtml(run) {
           <div class="label">${t('cardPace')}</div>
         </div>
       </div>
-      <div class="run-card-map" id="runMap-${run.id}"></div>
-      <div class="run-card-footer">
-        <button class="share-btn" data-distance="${distanceStr}" data-duration="${durationStr}" data-pace="${paceStr}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>
-          ${t('shareBtn')}
-        </button>
-      </div>
     </div>
   `;
-}
-
-// Each run card gets its own small, non-interactive Leaflet map showing the
-// real route drawn over real map tiles — same tile source as the main tracker.
-let historyMapInstances = [];
-
-function destroyHistoryMaps() {
-  historyMapInstances.forEach((m) => {
-    try { m.remove(); } catch (e) {}
-  });
-  historyMapInstances = [];
-}
-
-function initHistoryMaps(runs) {
-  destroyHistoryMaps();
-
-  runs.forEach((run) => {
-    try {
-      const track = parseTrack(run.gps_track);
-      const validPoints = track.filter(
-        (p) => Number.isFinite(p.lat) && Number.isFinite(p.lon)
-      );
-      if (validPoints.length < 2) return;
-
-      const containerId = `runMap-${run.id}`;
-      const container = document.getElementById(containerId);
-      if (!container) return;
-
-      const miniMap = L.map(containerId, {
-        zoomControl: false,
-        dragging: false,
-        touchZoom: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false,
-        boxZoom: false,
-        keyboard: false,
-        tap: false,
-        attributionControl: false,
-      });
-
-      const miniTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-      }).addTo(miniMap);
-
-      if (currentTheme !== 'light') {
-        miniTile.getContainer().style.filter =
-          'invert(94%) hue-rotate(210deg) brightness(0.9) contrast(0.85) saturate(0.45)';
-      }
-
-      const latlngs = validPoints.map((p) => [p.lat, p.lon]);
-      const line = L.polyline(latlngs, { color: '#9b81ff', weight: 4, opacity: 0.95 }).addTo(miniMap);
-
-      const bounds = line.getBounds();
-      if (bounds.isValid()) {
-        miniMap.fitBounds(bounds, { padding: [16, 16] });
-      } else {
-        miniMap.setView(latlngs[0], 15);
-      }
-
-      historyMapInstances.push(miniMap);
-    } catch (err) {
-      console.error('Failed to render mini-map for run', run.id, err);
-    }
-  });
-}
-
-historyList.addEventListener('click', (e) => {
-  const btn = e.target.closest('.share-btn');
-  if (!btn) return;
-  shareRun(btn.dataset.distance, btn.dataset.duration, btn.dataset.pace);
-});
-
-function shareRun(distance, duration, pace) {
-  const text = t('shareText')(distance, duration, pace);
-
-  if (navigator.share) {
-    navigator.share({ text }).catch(() => {});
-  } else if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => {
-      setStatus(t('shareCopied'));
-    }).catch(() => {});
-  }
 }
 
 // ---------------------------------------------------------------------

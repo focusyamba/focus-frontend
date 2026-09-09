@@ -347,7 +347,7 @@
   .run-card-stats {
     display: flex;
     gap: 24px;
-    padding: 10px 18px 16px;
+    padding: 10px 18px 18px;
   }
 
   .run-card-stats .value {
@@ -364,39 +364,6 @@
     color: var(--muted);
     margin-top: 3px;
   }
-
-  .run-card-map {
-    width: 100%;
-    height: 150px;
-    background: var(--surface-2);
-    display: block;
-  }
-
-  .run-card-map .leaflet-control-attribution { display: none; }
-
-  .run-card-footer {
-    display: flex;
-    justify-content: flex-end;
-    padding: 10px 14px;
-    border-top: 1px solid var(--line);
-  }
-
-  .share-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 6px 10px;
-    cursor: pointer;
-  }
-
-  .share-btn svg { width: 16px; height: 16px; }
-  .share-btn:active { color: var(--violet-bright); }
 
   #emptyHistory {
     text-align: center;
@@ -415,6 +382,70 @@
     font-size: 13px;
     color: var(--muted);
     margin-bottom: 10px;
+  }
+
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .settings-row-label {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .settings-row-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* iOS-style toggle switch */
+  .ios-switch {
+    position: relative;
+    display: inline-block;
+    width: 51px;
+    height: 31px;
+    flex-shrink: 0;
+  }
+
+  .ios-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .ios-switch-track {
+    position: absolute;
+    inset: 0;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .ios-switch-track::before {
+    content: "";
+    position: absolute;
+    width: 27px;
+    height: 27px;
+    left: 2px;
+    top: 1px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+    transition: transform 0.2s ease;
+  }
+
+  .ios-switch input:checked + .ios-switch-track {
+    background: var(--violet);
+    border-color: var(--violet);
+  }
+
+  .ios-switch input:checked + .ios-switch-track::before {
+    transform: translateX(20px);
   }
 
   .option-row { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -544,10 +575,15 @@
         </div>
       </div>
       <div class="settings-group">
-        <div class="settings-label" data-i18n="themeLabel">Theme</div>
-        <div class="option-row" id="themeOptions">
-          <button class="option-btn" data-theme="dark" data-i18n="themeDark">Dark</button>
-          <button class="option-btn" data-theme="light" data-i18n="themeLight">Light</button>
+        <div class="settings-row">
+          <div class="settings-row-label" data-i18n="themeLabel">Theme</div>
+          <label class="ios-switch">
+            <input type="checkbox" id="themeSwitch" />
+            <span class="ios-switch-track"></span>
+          </label>
+        </div>
+        <div class="settings-row-sub">
+          <span id="themeSwitchState">Dark</span>
         </div>
       </div>
     </section>
@@ -569,6 +605,6 @@
   </nav>
 </div>
 
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>
