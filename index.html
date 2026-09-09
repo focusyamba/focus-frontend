@@ -77,6 +77,8 @@
 
   .screen.active { display: flex; }
 
+  #trackScreen { position: relative; }
+
   /* ---------- Track screen: map ---------- */
   #map {
     flex: 1;
@@ -115,8 +117,13 @@
     margin-top: 4px;
   }
 
+  #actionRow {
+    display: flex;
+    gap: 10px;
+  }
+
   #actionRow button {
-    width: 100%;
+    flex: 1;
     border: none;
     border-radius: 16px;
     padding: 17px;
@@ -135,11 +142,61 @@
     box-shadow: 0 0 0 1px rgba(124,92,255,0.4), 0 8px 24px -8px rgba(124,92,255,0.6);
   }
 
+  #pauseBtn {
+    background: var(--surface-2);
+    color: var(--ink);
+    border: 1px solid var(--line) !important;
+    display: none;
+  }
+
   #stopBtn {
     background: var(--surface-2);
     color: var(--ink);
     border: 1px solid var(--line) !important;
     display: none;
+  }
+
+  /* ---------- Countdown overlay ---------- */
+  #countdownOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(4px);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    gap: 10px;
+  }
+
+  #countdownOverlay.active { display: flex; }
+
+  #countdownNumber {
+    font-size: 96px;
+    font-weight: 800;
+    color: var(--violet-bright);
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #countdownLabel {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  #cancelCountdownBtn {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 28px;
+    border-radius: 14px;
+    cursor: pointer;
   }
 
   #status {
@@ -262,13 +319,18 @@
 
 <div id="app">
   <div id="topbar">
-    <div class="wordmark">Run<span>Track</span></div>
+    <div class="wordmark">Run<span>Focus</span></div>
     <div class="username" id="username">—</div>
   </div>
 
   <main>
     <section id="trackScreen" class="screen active">
       <div id="map"></div>
+      <div id="countdownOverlay">
+        <div id="countdownNumber">15</div>
+        <div id="countdownLabel">Приготовьтесь</div>
+        <button id="cancelCountdownBtn">Отмена</button>
+      </div>
       <div id="sheet">
         <div id="stats">
           <div class="stat">
@@ -286,6 +348,7 @@
         </div>
         <div id="actionRow">
           <button id="startBtn">Начать пробежку</button>
+          <button id="pauseBtn">Пауза</button>
           <button id="stopBtn">Завершить</button>
         </div>
         <div id="status"></div>

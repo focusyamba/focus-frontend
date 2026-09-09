@@ -58,33 +58,90 @@ let userMarker = null;
 // ---------------------------------------------------------------------
 // 4. Tracking state
 // ---------------------------------------------------------------------
-let isTracking = false;
+// appState moves through: 'idle' -> 'countdown' -> 'running' <-> 'paused'
+let appState = 'idle';
 let watchId = null;
 let track = [];
-let startedAt = null;
+
+// Timing model: we keep a running total of "active" milliseconds (accumulatedMs),
+// plus the timestamp of when the current active segment began (segmentStart).
+// Elapsed time = accumulatedMs + (time since segmentStart, if currently running).
+// When paused, we freeze accumulatedMs and don't add anything until resumed.
+// New GPS points get their timestamp shifted back by total paused time, so the
+// final track has no time "gap" for the pause — distance/pace/duration stay correct.
+let accumulatedMs = 0;
+let segmentStart = null;
+let pauseOffsetMs = 0;
+let pauseStartedAt = null;
+
 let timerInterval = null;
+let countdownInterval = null;
+const COUNTDOWN_SECONDS = 15;
 
 const els = {
   startBtn: document.getElementById('startBtn'),
+  pauseBtn: document.getElementById('pauseBtn'),
   stopBtn: document.getElementById('stopBtn'),
   time: document.getElementById('statTime'),
   distance: document.getElementById('statDistance'),
   pace: document.getElementById('statPace'),
   status: document.getElementById('status'),
   trackScreen: document.getElementById('trackScreen'),
+  countdownOverlay: document.getElementById('countdownOverlay'),
+  countdownNumber: document.getElementById('countdownNumber'),
+  cancelCountdownBtn: document.getElementById('cancelCountdownBtn'),
 };
 
+// ---------------------------------------------------------------------
+// Start button: begins the countdown, not the tracking itself
+// ---------------------------------------------------------------------
 els.startBtn.addEventListener('click', () => {
   if (!navigator.geolocation) {
     setStatus('Геолокация не поддерживается этим устройством');
     return;
   }
 
+  startCountdown();
+});
+
+function startCountdown() {
+  appState = 'countdown';
+  let remaining = COUNTDOWN_SECONDS;
+
+  els.countdownNumber.textContent = remaining;
+  els.countdownOverlay.classList.add('active');
+
+  countdownInterval = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) {
+      clearInterval(countdownInterval);
+      els.countdownOverlay.classList.remove('active');
+      beginRun();
+    } else {
+      els.countdownNumber.textContent = remaining;
+    }
+  }, 1000);
+}
+
+els.cancelCountdownBtn.addEventListener('click', () => {
+  clearInterval(countdownInterval);
+  els.countdownOverlay.classList.remove('active');
+  appState = 'idle';
+});
+
+// ---------------------------------------------------------------------
+// Actually begins GPS tracking, once the countdown finishes
+// ---------------------------------------------------------------------
+function beginRun() {
+  appState = 'running';
   track = [];
-  startedAt = Date.now();
-  isTracking = true;
+  accumulatedMs = 0;
+  pauseOffsetMs = 0;
+  segmentStart = Date.now();
 
   els.startBtn.style.display = 'none';
+  els.pauseBtn.style.display = 'block';
+  els.pauseBtn.textContent = 'Пауза';
   els.stopBtn.style.display = 'block';
   els.trackScreen.classList.add('running');
   setStatus('Отслеживаем маршрут…');
@@ -96,9 +153,52 @@ els.startBtn.addEventListener('click', () => {
   });
 
   timerInterval = setInterval(updateTimerDisplay, 1000);
+}
+
+// ---------------------------------------------------------------------
+// Pause / resume
+// ---------------------------------------------------------------------
+els.pauseBtn.addEventListener('click', () => {
+  if (appState === 'running') {
+    pauseRun();
+  } else if (appState === 'paused') {
+    resumeRun();
+  }
 });
 
+function pauseRun() {
+  appState = 'paused';
+  accumulatedMs += Date.now() - segmentStart;
+  pauseStartedAt = Date.now();
+
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  if (timerInterval) clearInterval(timerInterval);
+
+  els.pauseBtn.textContent = 'Продолжить';
+  setStatus('На паузе');
+}
+
+function resumeRun() {
+  appState = 'running';
+  pauseOffsetMs += Date.now() - pauseStartedAt;
+  segmentStart = Date.now();
+
+  watchId = navigator.geolocation.watchPosition(onNewPosition, onGeoError, {
+    enableHighAccuracy: true,
+    maximumAge: 1000,
+    timeout: 10000,
+  });
+  timerInterval = setInterval(updateTimerDisplay, 1000);
+
+  els.pauseBtn.textContent = 'Пауза';
+  setStatus('Отслеживаем маршрут…');
+}
+
+// ---------------------------------------------------------------------
+// Stop / save
+// ---------------------------------------------------------------------
 els.stopBtn.addEventListener('click', async () => {
+  const wasPaused = appState === 'paused';
   stopTracking();
 
   if (track.length < 2) {
@@ -118,7 +218,7 @@ els.stopBtn.addEventListener('click', async () => {
       },
       body: JSON.stringify({
         track,
-        startedAt: new Date(startedAt).toISOString(),
+        startedAt: new Date(track[0].timestamp).toISOString(),
       }),
     });
 
@@ -138,7 +238,7 @@ function onNewPosition(position) {
   const point = {
     lat: position.coords.latitude,
     lon: position.coords.longitude,
-    timestamp: Date.now(),
+    timestamp: Date.now() - pauseOffsetMs,
   };
 
   track.push(point);
@@ -165,27 +265,34 @@ function onGeoError(err) {
 }
 
 function stopTracking() {
-  isTracking = false;
+  appState = 'idle';
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   if (timerInterval) clearInterval(timerInterval);
 }
 
 function resetUI() {
   els.startBtn.style.display = 'block';
+  els.pauseBtn.style.display = 'none';
   els.stopBtn.style.display = 'none';
   els.trackScreen.classList.remove('running');
 }
 
+function getElapsedMs() {
+  if (appState === 'running') {
+    return accumulatedMs + (Date.now() - segmentStart);
+  }
+  return accumulatedMs;
+}
+
 function updateTimerDisplay() {
-  const elapsedSec = Math.floor((Date.now() - startedAt) / 1000);
-  els.time.textContent = formatTime(elapsedSec);
+  els.time.textContent = formatTime(Math.floor(getElapsedMs() / 1000));
 }
 
 function updateStatsDisplay() {
   const distanceKm = calculateTrackDistanceClientSide(track);
   els.distance.textContent = distanceKm.toFixed(2);
 
-  const elapsedSec = (Date.now() - startedAt) / 1000;
+  const elapsedSec = getElapsedMs() / 1000;
   if (distanceKm > 0.05) {
     const paceSecPerKm = elapsedSec / distanceKm;
     els.pace.textContent = formatPace(paceSecPerKm);
